@@ -80,6 +80,7 @@ function initResize(tid) {
             cells.forEach((elem) => {
                 elem.removeAttribute('orgWidth');
             });
+            hookAR();
         };
 
         resizer.addEventListener('mousedown', mouseDownHandler);
@@ -109,5 +110,15 @@ function initResize(tid) {
         document.getElementsByTagName('head')[0].appendChild(styleElem);
         return tm;
     }
+    function hookAR() {
+        // dummy
+    }
+    function setHookAfterResize(aFunc) {
+        hookAR = aFunc;
+    }
     createResizableTable();
+    
+    return {
+        setHookAfterResize: setHookAfterResize
+    };
 }
