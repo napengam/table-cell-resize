@@ -11,7 +11,7 @@ found [here](https://github.com/phuocng/html-dom/blob/master/contents/resize-col
 1. Include the `resize-table-columns.js` script in your HTML:
 
    ```html
-   <script src="resize-table-columns.js"></script>
+   <script src="cellResize.js"></script>
    ```
 
 2. Call the `initResize(tid)` function, passing the table's ID as an argument:
