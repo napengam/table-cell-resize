@@ -8,7 +8,7 @@ found [here](https://github.com/phuocng/html-dom/blob/master/contents/resize-col
 
 ## How to Use
 
-1. Include the `resize-table-columns.js` script in your HTML:
+1. Include the `cellResize.js` script in your HTML:
 
    ```html
    <script src="cellResize.js"></script>
