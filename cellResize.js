@@ -13,6 +13,13 @@ function initResize(tid) {
     } else {
         rTable = tid;
     }
+    if (rTable.dataset.hasresize) {
+        return {
+            setHookAfterResize: setHookAfterResize
+        };
+    }
+    rTable.dataset.hasresize = '1';
+    rTable.style.width = 'auto'; // all other settings except fit-content would not work with colspan>1 
     tm = makeStyle();
     const createResizableTable = function () {
         let last = rTable.tHead.rows.length - 1;
@@ -20,7 +27,7 @@ function initResize(tid) {
         [].forEach.call(cols, function (col) {
             // Add a resizer element to the column
             const resizer = document.createElement('div');
-            resizer.classList.add('resizer'+tm);
+            resizer.classList.add('resizer' + tm);
             // Set the height
             resizer.style.height = `${rTable.tBodies[0].offsetHeight + rTable.tHead.rows[last].offsetHeight}px`;
             col.style.position = 'relative';
@@ -38,52 +45,26 @@ function initResize(tid) {
             w = parseFloat(styles.width, 10);
             document.addEventListener('mousemove', mouseMoveHandler);
             document.addEventListener('mouseup', mouseUpHandler);
-            resizer.classList.add('resizing'+tm);
+            resizer.classList.add('resizing' + tm);
         };
         const mouseMoveHandler = function (e) {
             const dx = e.clientX - x;
-            /* dx must also be aplyed to the original column width 
-             * of any columsn above 
-             */
-            let ri = col.parentNode.rowIndex - 1;
-            for (; ri >= 0; ri--) {
-                [].some.call(rTable.rows[ri].cells, (elem) => {
-                    if (!elem.hasAttribute('orgWidth')) {
-                        elem.setAttribute('orgWidth', elem.clientWidth);
-                    }
-                    if (elem.offsetLeft <= col.offsetLeft && col.offsetLeft <= elem.offsetLeft + elem.clientWidth) {
-                        // *****************************************
-                        // while dragging the marker with the mouse 
-                        // set column width also for columns in rows above
-                        // ******************************************
-                        elem.style.width = `${parseFloat(elem.getAttribute('orgWidth'), 10) + dx}px`;
-                        return true;
-                    }
-                    return false;
-                });
-            }
             // *****************************************
-            // finaly set colum width for resized column
+            // set colum width for resized column
             // ******************************************
             col.style.width = `${w + dx}px`;
         };
         const mouseUpHandler = function () {
-            resizer.classList.remove('resizing'+tm);
+            resizer.classList.remove('resizing' + tm);
             document.removeEventListener('mousemove', mouseMoveHandler);
             document.removeEventListener('mouseup', mouseUpHandler);
             x = 0;
             w = 0;
-            // *****************************************
-            // remove all traces of a resize done before
-            // ******************************************
-            let cells = rTable.querySelectorAll('[orgWidth]');
-            cells.forEach((elem) => {
-                elem.removeAttribute('orgWidth');
-            });
             hookAR();
         };
 
         resizer.addEventListener('mousedown', mouseDownHandler);
+
     };
     function makeStyle() {
         // *****************************************
@@ -117,8 +98,11 @@ function initResize(tid) {
         hookAR = aFunc;
     }
     createResizableTable();
-    
+
     return {
+        theTable: () => {
+            return rTable;
+        },
         setHookAfterResize: setHookAfterResize
     };
 }
