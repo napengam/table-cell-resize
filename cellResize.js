@@ -21,51 +21,56 @@ function initResize(tid) {
     rTable.dataset.hasresize = '1';
     rTable.style.width = 'auto'; // all other settings except fit-content would not work with colspan>1 
     tm = makeStyle();
-    const createResizableTable = function () {
-        let last = rTable.tHead.rows.length - 1;
-        const cols = rTable.tHead.rows[last].cells;
+    function createResizableTable() {
+        var cols, last, rows;
+        if (rTable.tHead !== null) {
+            last = rTable.tHead.rows.length - 1;
+            cols = rTable.tHead.rows[last].cells;
+            rows = rTable.tHead.rows;
+        } else { // no header
+            last = 0;
+            cols = rTable.rows[0].cells;
+            rows = rTable.rows;
+        }
+
         [].forEach.call(cols, function (col) {
             // Add a resizer element to the column
             const resizer = document.createElement('div');
             resizer.classList.add('resizer' + tm);
             // Set the height
-            resizer.style.height = `${rTable.tBodies[0].offsetHeight + rTable.tHead.rows[last].offsetHeight}px`;
+            resizer.style.height = `${rTable.tBodies[0].offsetHeight + rows[last].offsetHeight}px`;
             col.style.position = 'relative';
             col.appendChild(resizer);
-            createResizableColumn(col, resizer);
+            resizer.addEventListener('mousedown', mouseDownHandler);
         });
-    };
+    }
+    ;
 
-    const createResizableColumn = function (col, resizer) {
-        var x = 0;
-        var w = 0;
-        const mouseDownHandler = function (e) {
-            x = e.clientX;
-            const styles = window.getComputedStyle(col);
-            w = parseFloat(styles.width, 10);
-            document.addEventListener('mousemove', mouseMoveHandler);
-            document.addEventListener('mouseup', mouseUpHandler);
-            resizer.classList.add('resizing' + tm);
-        };
-        const mouseMoveHandler = function (e) {
-            const dx = e.clientX - x;
-            // *****************************************
-            // set colum width for resized column
-            // ******************************************
-            col.style.width = `${w + dx}px`;
-        };
-        const mouseUpHandler = function () {
-            resizer.classList.remove('resizing' + tm);
-            document.removeEventListener('mousemove', mouseMoveHandler);
-            document.removeEventListener('mouseup', mouseUpHandler);
-            x = 0;
-            w = 0;
-            hookAR();
-        };
+    function mouseDownHandler(e) {
+        this.x = e.clientX;
+        const styles = window.getComputedStyle(this.parentNode);
+        this.w = parseFloat(styles.width, 10);
+        rTable.div = this;
+        document.addEventListener('mousemove', mouseMoveHandler);
+        document.addEventListener('mouseup', mouseUpHandler);
+        this.classList.add('resizing' + tm);
+    }
 
-        resizer.addEventListener('mousedown', mouseDownHandler);
+    function mouseMoveHandler(e) {
+        const dx = e.clientX - rTable.div.x;
+        // *****************************************
+        // set colum width for resized column
+        // ******************************************
+        rTable.div.parentNode.style.width = `${rTable.div.w + dx}px`;
+    }
 
-    };
+    function mouseUpHandler() {
+        rTable.div.classList.remove('resizing' + tm);
+        document.removeEventListener('mousemove', mouseMoveHandler);
+        document.removeEventListener('mouseup', mouseUpHandler);
+        hookAR();
+    }
+
     function makeStyle() {
         // *****************************************
         // make styles inside so user does not have
