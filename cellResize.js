@@ -4,7 +4,7 @@ function initResize(tid) {
     // https://github.com/phuocng/html-dom/blob/master/contents/resize-columns-of-a-table.md
     // ******************************************
 
-    var rTable, tm;
+    var rTable, tm, info, down, move, up, touch;
     if (typeof tid === 'undefined' || tid === null) {
         return;
     }
@@ -18,46 +18,60 @@ function initResize(tid) {
             setHookAfterResize: setHookAfterResize
         };
     }
+
+    if (isTouchDevice() === false) {
+        down = 'mousedown';
+        move = 'mousemove';
+        up = 'mouseup';
+        touch = false;
+    } else {
+        down = 'touchstart';
+        move = 'touchmove';
+        up = 'touchend';
+        touch = true;
+    }
+
     rTable.dataset.hasresize = '1';
     rTable.style.width = 'auto'; // all other settings except fit-content would not work with colspan>1 
     tm = makeStyle();
     function createResizableTable() {
-        var cols, last, rows;
-        if (rTable.tHead !== null) {
-            last = rTable.tHead.rows.length - 1;
-            cols = rTable.tHead.rows[last].cells;
-            rows = rTable.tHead.rows;
-        } else { // no header
-            last = 0;
-            cols = rTable.rows[0].cells;
-            rows = rTable.rows;
-        }
-
-        [].forEach.call(cols, function (col) {
+        info = getInfo();
+        [].forEach.call(info.cols, function (col) {
             // Add a resizer element to the column
             const resizer = document.createElement('div');
-            resizer.classList.add('resizer' + tm);
+            resizer.classList.add(`resizer_${tm}_`);
             // Set the height
-            resizer.style.height = `${rTable.tBodies[0].offsetHeight + rows[last].offsetHeight}px`;
+            resizer.style.height = `${rTable.tBodies[0].offsetHeight + info.height}px`;
             col.style.position = 'relative';
             col.appendChild(resizer);
-            resizer.addEventListener('mousedown', mouseDownHandler);
+            resizer.addEventListener(down, mouseDownHandler);
         });
     }
-    ;
 
     function mouseDownHandler(e) {
-        this.x = e.clientX;
-        const styles = window.getComputedStyle(this.parentNode);
-        this.w = parseFloat(styles.width, 10);
+        if (!touch) {
+            this.x = e.clientX;
+        } else {
+            e.stopPropagation();
+            e.preventDefault();
+            this.x = e.touches[0].clientX;
+        }
+        this.w = this.parentNode.getBoundingClientRect().width;
         rTable.div = this;
-        document.addEventListener('mousemove', mouseMoveHandler);
-        document.addEventListener('mouseup', mouseUpHandler);
-        this.classList.add('resizing' + tm);
+        document.addEventListener(move, mouseMoveHandler);
+        document.addEventListener(up, mouseUpHandler);
+        this.classList.add(`resizing_${tm}_`);
     }
 
     function mouseMoveHandler(e) {
-        const dx = e.clientX - rTable.div.x;
+        let dx;
+        if (!touch) {
+            dx = e.clientX - rTable.div.x;
+        } else {
+            e.stopPropagation();
+          
+            dx = e.touches[0].clientX - rTable.div.x;
+        }
         // *****************************************
         // set colum width for resized column
         // ******************************************
@@ -65,21 +79,54 @@ function initResize(tid) {
     }
 
     function mouseUpHandler() {
-        rTable.div.classList.remove('resizing' + tm);
-        document.removeEventListener('mousemove', mouseMoveHandler);
-        document.removeEventListener('mouseup', mouseUpHandler);
+        rTable.div.classList.remove(`resizing_${tm}_`);
+        document.removeEventListener(move, mouseMoveHandler);
+        document.removeEventListener(up, mouseUpHandler);
         hookAR();
     }
+    function getInfo() {
+        var info = {};
+        if (rTable.tHead !== null) {
+            info.last = rTable.tHead.rows.length - 1;
+            info.cols = rTable.tHead.rows[info.last].cells;
+            info.rows = rTable.tHead.rows;
+            info.height = info.rows[info.last].offsetHeight;
+        } else { // no header
+            info.last = 0;
+            info.cols = rTable.rows[0].cells;
+            info.rows = rTable.rows;
+            info.height = 0;
+        }
+        return info;
+    }
+
+
 
     function makeStyle() {
         // *****************************************
         // make styles inside so user does not have
         // to deal with css.
         // ******************************************
-
-        var tm = Date.now(), styleElem = document.createElement('STYLE');
+        var styleElem, tm, exists = false, nodes;
+        nodes = document.querySelectorAll('style');
+        // *****************************************
+        // does style already exist
+        // ******************************************
+        [].some.call(nodes, elem => {
+            if (elem.innerText.indexOf('.resizer') !== -1) {
+                tm = elem.innerText.split('_')[1];
+                exists = true;
+                return true;
+            }
+            return false;
+        });
+        if (exists) {
+            return tm;
+        }
+        tm = Date.now(); // to make style 'unique' 
+        styleElem = document.createElement('STYLE');
         styleElem.innerHTML = [
-            `.resizer${tm} {
+            `.resizer_${tm}_ {
                 /* Displayed at the right side of column */
                 position: absolute;
                 top: 0;
@@ -88,8 +135,8 @@ function initResize(tid) {
                 cursor: col-resize;
                 user-select: none;
             }`,
-            `.resizer${tm}:hover,
-            .resizing${tm} {
+            `.resizer_${tm}_:hover,
+            .resizing_${tm}_ {
                 border-right: 2px solid blue;
             }`
         ].join('');
@@ -101,6 +148,13 @@ function initResize(tid) {
     }
     function setHookAfterResize(aFunc) {
         hookAR = aFunc;
+
+    }
+
+    function isTouchDevice() { // from chatGPT
+        return 'ontouchstart' in window ||
+                navigator.maxTouchPoints > 0 ||
+                navigator.msMaxTouchPoints > 0;
     }
     createResizableTable();
 
